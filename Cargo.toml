@@ -1,0 +1,29 @@
+[package]
+name = "edroid"
+version = "0.1.0"
+edition = "2021"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+egui = { version = "0.31" }
+winit = { version = "0.30", features = ["android-native-activity"] }
+eframe = { version = "0.31", features = ["android-native-activity"] }
+android_logger = "0.14"
+log = "0.4.25"
+
+[package.metadata.android]
+package = "me.avidor.edroid"
+build_targets = ["aarch64-linux-android"]
+# build_targets = ["aarch64-linux-android", "armv7-linux-androideabi"]
+min_sdk_version = 23
+target_sdk_version = 30
+
+[[package.metadata.android.uses_permission]]
+name = "android.permission.INTERNET"
