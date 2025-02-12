@@ -4,7 +4,7 @@ use std::{
 };
 
 use anyhow::Result;
-use egui::{Align, Layout};
+use egui::{Align, Layout, Rect, RichText};
 use itertools::Itertools;
 use jni::objects::{JObject, JString, JValue};
 use parking_lot::Mutex;
@@ -23,16 +23,13 @@ pub struct Edroid {
     #[serde(skip)]
     web_client: Client,
     repos: Arc<Mutex<Vec<Repo>>>,
+    layout: LatestAppsLayout
 }
 
-impl Default for Edroid {
-    fn default() -> Self {
-        Self {
-            rt: Runtime::new().unwrap(),
-            web_client: Client::new(),
-            repos: Arc::new(Mutex::new(vec![Repo::default()])),
-        }
-    }
+#[derive(Serialize, Deserialize, Clone, Copy, Default)]
+pub enum LatestAppsLayout {
+    #[default]
+    Fdroid,
 }
 
 impl eframe::App for Edroid {
@@ -54,7 +51,7 @@ impl eframe::App for Edroid {
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 let lock = self.repos.lock();
-                let apps = lock
+                let mut apps = lock
                     .iter()
                     .flat_map(|r| {
                         if let Some(apps) = &r.apps {
@@ -63,22 +60,101 @@ impl eframe::App for Edroid {
                             Vec::new()
                         }
                     })
-                    .sorted_by_key(|a| date_to_integer(&a.last_updated).map(|i| -i)).take(50);
+                    .sorted_by_key(|a| date_to_integer(&a.last_updated).map(|i| -i))
+                    .take(50);
 
-                for app in apps {
-                    ui.horizontal(|ui| {
-                        ui.label(&app.name);
-                        ui.label(&app.last_updated);
-                    });
+                match self.layout {
+                    LatestAppsLayout::Fdroid => {
+                        for row_type in (0..2u8).cycle() {
+                            match row_type {
+                                0 => {
+                                    if let Some(app) = apps.next() {
+                                        ui.group(|ui| {
+                                            ui.horizontal(|ui| {
+                                                ui.vertical(|ui| {
+                                                    ui.label(RichText::new(app.name.clone()).strong());
+                                                    ui.label(&app.summary);
+                                                })
+                                            });
+                                        });
+                                    } else {
+                                        break;
+                                    }
+                                }
+                                1 => {
+                                    if let (Some(app1), Some(app2)) = (apps.next(), apps.next()) {
+                                        ui.columns(2, |ui| {
+                                            ui[0].group(|ui| {
+                                                ui.horizontal(|ui| {
+                                                    ui.vertical(|ui| {
+                                                        ui.label(RichText::new(app1.name.clone()).strong());
+                                                        ui.label(&app1.summary);
+                                                    })
+                                                });
+                                            });
+                                            ui[1].group(|ui| {
+                                                ui.horizontal(|ui| {
+                                                    ui.vertical(|ui| {
+                                                        ui.label(RichText::new(app2.name.clone()).strong());
+                                                        ui.label(&app2.summary);
+                                                    })
+                                                });
+                                            });
+                                        });
+                                    } else {
+                                        break;
+                                    }
+                                }
+                                2 => {
+                                    if let (Some(app1), Some(app2)) = (apps.next(), apps.next()) {
+                                        ui.columns(2, |ui| {
+                                            ui[0].group(|ui| {
+                                                ui.horizontal(|ui| {
+                                                    ui.vertical(|ui| {
+                                                        ui.label(RichText::new(app1.name.clone()).strong());
+                                                        ui.label(&app1.summary);
+                                                    })
+                                                });
+                                            });
+                                            ui[1].group(|ui| {
+                                                ui.horizontal(|ui| {
+                                                    ui.vertical(|ui| {
+                                                        ui.label(RichText::new(app2.name.clone()).strong());
+                                                        ui.label(&app2.summary);
+                                                    })
+                                                });
+                                            });
+                                        });
+                                    } else {
+                                        break;
+                                    }
+                                }
+                                _ => unreachable!()
+                            }
+                        }
+                    }
                 }
             });
         });
     }
 }
 
+impl Default for Edroid {
+    fn default() -> Self {
+        Self {
+            rt: Runtime::new().unwrap(),
+            web_client: Client::new(),
+            repos: Arc::new(Mutex::new(vec![Repo::default()])),
+            layout: Default::default(),
+        }
+    }
+}
+
+
 impl Edroid {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        cc.egui_ctx.set_zoom_factor(2.0);
+        cc.egui_ctx
+            .set_zoom_factor(2.0);
 
         if let Some(storage) = cc.storage {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
@@ -229,4 +305,3 @@ fn date_to_integer(date_str: &str) -> Option<i32> {
         None // Invalid month or day
     }
 }
-
