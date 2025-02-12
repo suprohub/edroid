@@ -1,17 +1,15 @@
-
-#[cfg(target_os = "android")]
 pub mod app;
+pub mod repo;
 
 #[cfg(target_os = "android")]
 #[no_mangle]
 fn android_main(app: winit::platform::android::activity::AndroidApp) {
-    use log::LevelFilter;
     use android_logger::{Config, FilterBuilder};
+    use log::LevelFilter;
 
     android_logger::init_once(
         Config::default()
-            .with_max_level(LevelFilter::Info)
-            .with_filter(FilterBuilder::new().parse("debug,wry=info").build()),
+            .with_max_level(LevelFilter::Info),
     );
 
     let options = eframe::NativeOptions {
@@ -20,9 +18,9 @@ fn android_main(app: winit::platform::android::activity::AndroidApp) {
     };
 
     eframe::run_native(
-        "Rust Browser",
+        "Edroid",
         options,
-        Box::new(|cc| Ok(Box::new(app::BrowserApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(app::Edroid::new(cc)))),
     )
     .unwrap();
 }

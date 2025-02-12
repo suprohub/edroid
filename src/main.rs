@@ -1,12 +1,13 @@
 use eframe::NativeOptions;
 
 pub mod app;
-pub use app::*;
+pub mod repo;
 
 fn main() {
     eframe::run_native(
-        "Rust Browser",
+        "Edroid",
         NativeOptions::default(),
-        Box::new(|cc| Ok(Box::new(BrowserApp::new(cc)))),
-    ).unwrap()
+        Box::new(|cc| Ok(Box::new(app::Edroid::new(cc)))),
+    )
+    .unwrap()
 }
