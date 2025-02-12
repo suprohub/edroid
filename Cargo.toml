@@ -23,10 +23,12 @@ serde = { version = "1.0", features = ["derive"] }
 anyhow = "1.0"
 jni = { version = "0.21", features = ["invocation"] }
 ndk-context = "0.1"
-zip = "2.2"
 futures = "0.3"
 futures-util = "0.3"
-fdroid = "0.1.1"
+quick-xml = { version = "0.37", features = ["serialize"] }
+simple_logger = "5.0"
+zip = "2.2.2"
+parking_lot = { version = "0.12.3", features = ["serde"] }
 
 [package.metadata.android]
 package = "me.avidor.edroid"

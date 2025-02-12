@@ -7,10 +7,7 @@ fn android_main(app: winit::platform::android::activity::AndroidApp) {
     use android_logger::{Config, FilterBuilder};
     use log::LevelFilter;
 
-    android_logger::init_once(
-        Config::default()
-            .with_max_level(LevelFilter::Info),
-    );
+    android_logger::init_once(Config::default().with_max_level(LevelFilter::Info));
 
     let options = eframe::NativeOptions {
         android_app: Some(app),
