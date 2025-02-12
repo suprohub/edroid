@@ -55,7 +55,7 @@ pub struct Meta {
     pub mirrors: Option<Vec<String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct App {
     pub id: String,
     pub added: String,
@@ -90,7 +90,7 @@ pub struct App {
     pub packages: Vec<Package>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Package {
     pub version: String,
     #[serde(rename = "versioncode")]
@@ -118,7 +118,7 @@ pub struct Package {
 ///
 /// During Deserialization, if a categories does not match any category defined in the enum,
 /// it automatically gets assigned to [Category::Custom]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Category {
     Connectivity,
     Development,
@@ -146,7 +146,7 @@ pub enum Category {
 /// The type of repository - for automatic building from source. If this is not specified, automatic building is disabled for this application.
 ///
 /// See [documentation](https://f-droid.org/en/docs/Build_Metadata_Reference/#RepoType)
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RepoType {
     #[serde(rename = "git")]
     Git,
@@ -165,7 +165,7 @@ pub enum RepoType {
 /// Features of the application that hinders the user.
 ///
 /// See [anti-feature](https://en.wiktionary.org/wiki/anti-feature)
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum AntiFeature {
     /// The application contains advertising
     Ads,

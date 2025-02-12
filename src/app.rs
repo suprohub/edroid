@@ -5,6 +5,7 @@ use std::{
 
 use anyhow::Result;
 use egui::{Align, Layout};
+use itertools::Itertools;
 use jni::objects::{JObject, JString, JValue};
 use parking_lot::Mutex;
 use reqwest::Client;
@@ -21,7 +22,7 @@ pub struct Edroid {
     rt: Runtime,
     #[serde(skip)]
     web_client: Client,
-    repos: Vec<Arc<Mutex<Repo>>>,
+    repos: Arc<Mutex<Vec<Repo>>>,
 }
 
 impl Default for Edroid {
@@ -29,7 +30,7 @@ impl Default for Edroid {
         Self {
             rt: Runtime::new().unwrap(),
             web_client: Client::new(),
-            repos: vec![Arc::new(Mutex::new(Repo::default()))],
+            repos: Arc::new(Mutex::new(vec![Repo::default()])),
         }
     }
 }
@@ -44,44 +45,34 @@ impl eframe::App for Edroid {
 
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     if ui.button("Sync").clicked() {
-                        for repo in &self.repos {
-                            let repo = repo.clone();
-
-                            if let Some(url) = &repo.lock().meta.url {
-                                let index = format!("{url}/index.jar");
-                                let client = self.web_client.clone();
-                                let repo = repo.clone();
-
-                                self.rt.spawn(async move {
-                                    let bytes = client
-                                        .get(&index)
-                                        .send()
-                                        .await
-                                        .unwrap()
-                                        .bytes()
-                                        .await
-                                        .unwrap();
-                                    let cursor = Cursor::new(bytes);
-                                    let new_repo: Repo =
-                                        quick_xml::de::from_reader(BufReader::new(
-                                            ZipArchive::new(cursor)
-                                                .unwrap()
-                                                .by_name("index.xml")
-                                                .unwrap(),
-                                        ))
-                                        .unwrap();
-                                    log::info!("{new_repo:?}");
-                                    *repo.lock() = new_repo;
-                                });
-                            } else if let Some(mirrors) = &repo.lock().meta.mirrors {
-                            };
-                        }
+                        self.sync();
                     };
                 });
             });
         });
 
-        egui::CentralPanel::default().show(ctx, |ui| {});
+        egui::CentralPanel::default().show(ctx, |ui| {
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                let lock = self.repos.lock();
+                let apps = lock
+                    .iter()
+                    .flat_map(|r| {
+                        if let Some(apps) = &r.apps {
+                            apps.iter().collect::<Vec<_>>()
+                        } else {
+                            Vec::new()
+                        }
+                    })
+                    .sorted_by_key(|a| date_to_integer(&a.last_updated).map(|i| -i)).take(50);
+
+                for app in apps {
+                    ui.horizontal(|ui| {
+                        ui.label(&app.name);
+                        ui.label(&app.last_updated);
+                    });
+                }
+            });
+        });
     }
 }
 
@@ -94,6 +85,37 @@ impl Edroid {
         }
 
         Default::default()
+    }
+
+    pub fn sync(&self) {
+        for (idx, repo) in self.repos.lock().iter().enumerate() {
+            if let Some(url) = &repo.meta.url {
+                let index = format!("{url}/index.jar");
+                let client = self.web_client.clone();
+                let repos = self.repos.clone();
+
+                self.rt.spawn(async move {
+                    let bytes = client
+                        .get(&index)
+                        .send()
+                        .await
+                        .unwrap()
+                        .bytes()
+                        .await
+                        .unwrap();
+                    let cursor = Cursor::new(bytes);
+                    let new_repo: Repo = quick_xml::de::from_reader(BufReader::new(
+                        ZipArchive::new(cursor)
+                            .unwrap()
+                            .by_name("index.xml")
+                            .unwrap(),
+                    ))
+                    .unwrap();
+                    repos.lock()[idx] = new_repo;
+                });
+            } else if let Some(mirrors) = &repo.meta.mirrors {
+            };
+        }
     }
 
     fn get_cache_path() -> String {
@@ -191,3 +213,20 @@ impl Edroid {
         Ok(())
     }*/
 }
+
+fn date_to_integer(date_str: &str) -> Option<i32> {
+    let mut parts = date_str.split('-');
+
+    // Attempt to parse year, month, and day in a single line
+    let year = parts.next()?.parse::<i32>().ok()?;
+    let month = parts.next()?.parse::<i32>().ok()?;
+    let day = parts.next()?.parse::<i32>().ok()?;
+
+    // Validate month and day ranges
+    if (1..=12).contains(&month) && (1..=31).contains(&day) {
+        Some(year * 10000 + month * 100 + day)
+    } else {
+        None // Invalid month or day
+    }
+}
+
