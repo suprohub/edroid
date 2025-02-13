@@ -1,4 +1,5 @@
 pub mod app;
+pub mod egui_custom;
 pub mod repo;
 
 #[cfg(target_os = "android")]

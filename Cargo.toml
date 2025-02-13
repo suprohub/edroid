@@ -30,6 +30,7 @@ simple_logger = "5.0"
 zip = "2.2"
 parking_lot = { version = "0.12", features = ["serde"] }
 itertools = "0.14.0"
+egui_extras = { version = "0.31.0", features = ["all_loaders"] }
 
 [package.metadata.android]
 package = "me.avidor.edroid"

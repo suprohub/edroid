@@ -4,7 +4,7 @@ use std::{
 };
 
 use anyhow::Result;
-use egui::{Align, Layout, Rect, RichText};
+use egui::{Align, Context, Layout, RichText};
 use itertools::Itertools;
 use jni::objects::{JObject, JString, JValue};
 use parking_lot::Mutex;
@@ -13,7 +13,9 @@ use serde::{Deserialize, Serialize};
 use tokio::runtime::Runtime;
 use zip::ZipArchive;
 
-use crate::repo::Repo;
+use crate::{egui_custom::group_button, repo::Repo};
+
+//const PACKAGE_PATH: &str = "/data/data/me.avidor.edroid/files/";
 
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
@@ -23,7 +25,7 @@ pub struct Edroid {
     #[serde(skip)]
     web_client: Client,
     repos: Arc<Mutex<Vec<Repo>>>,
-    layout: LatestAppsLayout
+    layout: LatestAppsLayout,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Default)]
@@ -33,7 +35,7 @@ pub enum LatestAppsLayout {
 }
 
 impl eframe::App for Edroid {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
@@ -42,7 +44,7 @@ impl eframe::App for Edroid {
 
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     if ui.button("Sync").clicked() {
-                        self.sync();
+                        self.sync(ctx);
                     };
                 });
             });
@@ -65,18 +67,11 @@ impl eframe::App for Edroid {
 
                 match self.layout {
                     LatestAppsLayout::Fdroid => {
-                        for row_type in (0..2u8).cycle() {
+                        for row_type in (0..=2u8).cycle() {
                             match row_type {
                                 0 => {
                                     if let Some(app) = apps.next() {
-                                        ui.group(|ui| {
-                                            ui.horizontal(|ui| {
-                                                ui.vertical(|ui| {
-                                                    ui.label(RichText::new(app.name.clone()).strong());
-                                                    ui.label(&app.summary);
-                                                })
-                                            });
-                                        });
+                                        group_button(ui, app, true);
                                     } else {
                                         break;
                                     }
@@ -84,22 +79,8 @@ impl eframe::App for Edroid {
                                 1 => {
                                     if let (Some(app1), Some(app2)) = (apps.next(), apps.next()) {
                                         ui.columns(2, |ui| {
-                                            ui[0].group(|ui| {
-                                                ui.horizontal(|ui| {
-                                                    ui.vertical(|ui| {
-                                                        ui.label(RichText::new(app1.name.clone()).strong());
-                                                        ui.label(&app1.summary);
-                                                    })
-                                                });
-                                            });
-                                            ui[1].group(|ui| {
-                                                ui.horizontal(|ui| {
-                                                    ui.vertical(|ui| {
-                                                        ui.label(RichText::new(app2.name.clone()).strong());
-                                                        ui.label(&app2.summary);
-                                                    })
-                                                });
-                                            });
+                                            group_button(&mut ui[0], app1, false);
+                                            group_button(&mut ui[1], app2, false);
                                         });
                                     } else {
                                         break;
@@ -108,28 +89,14 @@ impl eframe::App for Edroid {
                                 2 => {
                                     if let (Some(app1), Some(app2)) = (apps.next(), apps.next()) {
                                         ui.columns(2, |ui| {
-                                            ui[0].group(|ui| {
-                                                ui.horizontal(|ui| {
-                                                    ui.vertical(|ui| {
-                                                        ui.label(RichText::new(app1.name.clone()).strong());
-                                                        ui.label(&app1.summary);
-                                                    })
-                                                });
-                                            });
-                                            ui[1].group(|ui| {
-                                                ui.horizontal(|ui| {
-                                                    ui.vertical(|ui| {
-                                                        ui.label(RichText::new(app2.name.clone()).strong());
-                                                        ui.label(&app2.summary);
-                                                    })
-                                                });
-                                            });
+                                            group_button(&mut ui[0], app1, true);
+                                            group_button(&mut ui[1], app2, true);
                                         });
                                     } else {
                                         break;
                                     }
                                 }
-                                _ => unreachable!()
+                                _ => unreachable!(),
                             }
                         }
                     }
@@ -150,11 +117,11 @@ impl Default for Edroid {
     }
 }
 
-
 impl Edroid {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        cc.egui_ctx
-            .set_zoom_factor(2.0);
+        egui_extras::install_image_loaders(&cc.egui_ctx);
+
+        cc.egui_ctx.set_zoom_factor(1.5);
 
         if let Some(storage) = cc.storage {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
@@ -163,12 +130,13 @@ impl Edroid {
         Default::default()
     }
 
-    pub fn sync(&self) {
+    pub fn sync(&self, ctx: &Context) {
         for (idx, repo) in self.repos.lock().iter().enumerate() {
             if let Some(url) = &repo.meta.url {
                 let index = format!("{url}/index.jar");
                 let client = self.web_client.clone();
                 let repos = self.repos.clone();
+                let ctx = ctx.clone();
 
                 self.rt.spawn(async move {
                     let bytes = client
@@ -188,6 +156,7 @@ impl Edroid {
                     ))
                     .unwrap();
                     repos.lock()[idx] = new_repo;
+                    ctx.request_repaint();
                 });
             } else if let Some(mirrors) = &repo.meta.mirrors {
             };

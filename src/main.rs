@@ -2,6 +2,7 @@ use eframe::NativeOptions;
 use log::Level;
 
 pub mod app;
+pub mod egui_custom;
 pub mod repo;
 
 fn main() {
