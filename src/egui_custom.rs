@@ -6,7 +6,6 @@ pub fn group_button(ui: &mut Ui, app: &App, image_left: bool) {
     if ui.group(|ui| {
         if image_left {
             ui.horizontal(|ui| {
-                log::info!("{app:?}");
                 if let Some(icon) = &app.icon {
                     log::info!("{icon}");
                     ui.image("https://f-droid.org/repo/icons/".to_string() + icon);

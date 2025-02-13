@@ -41,3 +41,15 @@ target_sdk_version = 30
 
 [[package.metadata.android.uses_permission]]
 name = "android.permission.INTERNET"
+
+[package.metadata.android.application]
+label = "E-Droid"
+theme = "@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen"
+
+debuggable = false
+extract_native_libs = true
+uses_cleartext_traffic = true
+
+[package.metadata.android.signing.release]
+path = "debug.keystore"
+keystore_password = "android"
